@@ -21,20 +21,15 @@ export default function UploadScreen() {
 
     const upload = async () => {
         console.log("1. upload start");
-
         if (!uri) {
             console.log("uriなし");
             return;
         }
-
         console.log("2. uri:", uri);
-
         try {
             const res = await fetch(uri);
             const blob = await res.blob();
-
             console.log("3. blob OK");
-
             const uploadTask = await uploadData({
                 path: `images/${Date.now()}.jpg`,
                 data: blob,
@@ -44,7 +39,6 @@ export default function UploadScreen() {
             });
             await uploadTask.result;
             console.log("upload result:", uploadTask.result);
-
             console.log("4. upload success");
         } catch (e) {
             console.log("UPLOAD ERROR:", e);
