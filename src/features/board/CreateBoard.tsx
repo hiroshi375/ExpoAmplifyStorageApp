@@ -6,6 +6,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'react-native';
+import { uploadData, getUrl } from 'aws-amplify/storage';
 
 const client = generateClient<Schema>();
 
@@ -15,10 +18,11 @@ type RootStackParamList = {
 };
 
 function CreateBoard() {
-    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'CreateBoard'>>();
     const [fmsg, setFmsg] = useState("");
+    const [imageUri, setImageUri] = useState<string | null>(null);
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'CreateBoard'>>();
+    //const [fmsg, setFmsg] = useState("");
     //const [femail, setFemail] = useState("");
-    const [fimg, setFimg] = useState("");
 
     // 👇 追加：Person関連
     const [people, setPeople] = useState<any[]>([]);
@@ -28,6 +32,59 @@ function CreateBoard() {
     const [expanded, setExpanded] = useState(false);
     // 選択されたPersonの情報を保持（確認用）
     //const [selectedPerson, setSelectedPerson] = useState<any>(null);
+    // 👇 表示用（ここ重要）
+    const selectedPerson = people.find(p => p.id === selectedPersonId);
+
+    // 画像選択関数
+    const pickImage = async () => {
+        const permission =
+            await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (!permission.granted) {
+            Alert.alert("権限エラー", "画像アクセス権限が必要です");
+            return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 1,
+        });
+
+        if (!result.canceled) {
+            setImageUri(result.assets[0].uri);
+        }
+    };
+
+    // S3画像アップロード関数
+    const uploadImage = async (uri: string) => {
+        try {
+            const response = await fetch(uri);
+            const blob = await response.blob();
+
+            const path = `images/${Date.now()}.jpg`;
+
+            const uploadTask = await uploadData({
+                path,
+                data: blob,
+                options: {
+                    contentType: 'image/jpeg',
+                },
+            });
+
+            await uploadTask.result;
+
+            // S3 URL取得
+            const urlResult = await getUrl({
+                path,
+            });
+
+            return urlResult.url.toString();
+
+        } catch (e) {
+            console.error("UPLOAD ERROR:", e);
+            throw e;
+        }
+    };
+
     // -----------------------------
     // Person一覧取得
     // -----------------------------
@@ -41,7 +98,8 @@ function CreateBoard() {
 
         fetchPeople();
         console.log("selectedPerson updated:", JSON.stringify(selectedPerson, null, 2)); // 👈 追加
-    }, [selectedPersonId]);
+        //    }, [selectedPersonId]);
+    }, []); // 初回レンダリング時のみ取得
 
 
     // -----------------------------
@@ -65,6 +123,13 @@ function CreateBoard() {
                 return;
             }
 
+            // 👇 画像アップロード
+            let imageUrl = null;
+
+            if (imageUri) {
+                imageUrl = await uploadImage(imageUri);
+            }
+
             // -----------------------------
             // ② Board作成
             // -----------------------------
@@ -73,7 +138,7 @@ function CreateBoard() {
                     {
                         message: fmsg,
                         name: user.name,
-                        image: fimg === "" ? null : fimg,
+                        image: imageUrl,
                         personID: user.id,
                     },
                     {
@@ -92,8 +157,8 @@ function CreateBoard() {
 
             // 入力リセット
             setFmsg("");
-            setFimg("");
-            setSelectedPersonId("");
+            setImageUri(null);
+            setSelectedPersonId(null);
 
             navigation.goBack();
 
@@ -103,8 +168,6 @@ function CreateBoard() {
         }
     };
 
-    // 👇 表示用（ここ重要）
-    const selectedPerson = people.find(p => p.id === selectedPersonId);
 
     return (
         <View style={{ flex: 1, padding: 16 }}>
@@ -161,14 +224,31 @@ function CreateBoard() {
                     <Text style={{ color: 'red', fontSize: 10 }}>
                         {!selectedPersonId && "ユーザーを選択してください"}
                     </Text>
-                    <TextInput
+                    {/*<TextInput
                         label="Image URL"
                         value={fimg}
                         onChangeText={setFimg}
                         mode="outlined"
                         style={{ marginTop: 10 }}
-                    />
-
+                    />*/}
+                    <Button
+                        mode="outlined"
+                        onPress={pickImage}
+                        style={{ marginTop: 10 }}
+                    >
+                        画像選択
+                    </Button>
+                    {imageUri && (
+                        <Image
+                            source={{ uri: imageUri }}
+                            style={{
+                                width: 200,
+                                height: 200,
+                                marginTop: 10,
+                                alignSelf: 'center',
+                            }}
+                        />
+                    )}
                     <Button
                         mode="contained"
                         onPress={onCreate}
