@@ -86,6 +86,11 @@ function ListBoard() {
                 authMode: 'userPool',
             }).subscribe({
                 next: ({ items }) => {
+                    const sorted = [...items].sort(
+                        (a, b) =>
+                            new Date(b.createdAt).getTime() -
+                            new Date(a.createdAt).getTime()
+                    );
                     setItems(items);
                 },
                 error: (error) => {
