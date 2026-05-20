@@ -118,83 +118,88 @@ function ListBoard() {
     };
 
     useEffect(() => {
-        const init = async () => {
-            // -----------------------------
-            // ① 初回ロード・リアルタイム監視
-            // -----------------------------
-            //const result = await client.models.Board.list({
-            //    authMode: 'userPool',
-            //});
-            const result = client.models.Board.observeQuery({
+
+        let subscription: any;
+
+        const startObserve = async () => {
+
+            let filter = undefined;
+
+            // フィルター条件
+            if (find.trim()) {
+                filter = {
+                    or: [
+                        { name: { contains: find } },
+                        { message: { contains: find } },
+                    ],
+                } as any;
+            }
+
+            subscription = client.models.Board.observeQuery({
+                filter,
                 authMode: 'userPool',
             }).subscribe({
-                next: ({ items }) => {
+
+                next: async ({ items }) => {
+
                     const sorted = [...items].sort(
                         (a, b) =>
                             new Date(b.createdAt).getTime() -
                             new Date(a.createdAt).getTime()
                     );
-                    setItems(items);
+
+                    const boardsWithUrls = await Promise.all(
+                        sorted.map(async (item) => {
+
+                            let imageUrl = null;
+
+                            if (item.image) {
+                                try {
+
+                                    // 既にURLならそのまま
+                                    if (item.image.startsWith('http')) {
+
+                                        imageUrl = item.image;
+
+                                    } else {
+
+                                        const urlResult = await getUrl({
+                                            path: item.image,
+                                        });
+
+                                        imageUrl = urlResult.url.toString();
+                                    }
+
+                                } catch (e) {
+                                    console.error("getUrl error =", e);
+                                }
+                            }
+
+                            return {
+                                ...item,
+                                imageUrl,
+                            };
+                        })
+                    );
+
+                    setItems(boardsWithUrls);
                 },
+
                 error: (error) => {
                     console.error(error);
                 },
             });
-            return () => result.unsubscribe();
-            // -----------------------------
-            // ② データが0件なら作成
-            // -----------------------------
-            if (items.length === 0) {
-                console.log("初期データ作成");
-
-                // Person を作成
-                const person = await client.models.Person.create({
-                    name: "テストユーザー",
-                    email: "test@example.com",
-                });
-                const personData = person.data;
-
-                if (!personData) {
-                    throw new Error('Person create failed');
-                }
-
-                await client.models.Board.create({
-                    name: "テストユーザー",
-                    message: "最初の投稿",
-                    personID: personData!.id,
-                });
-
-            }
-
-            // ✅ 初回データ取得
-            load();
         };
 
-        init();
+        startObserve();
 
-        // -----------------------------
-        // リアルタイム監視（observeの代替）
-        // -----------------------------
-        //const sub = client.models.Board.observeQuery().subscribe({
-        //  next: ({ items }) => {
-        //    setItems(items);
-        //  },
-        //});
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
+            }
+        };
 
-        //return () => sub.unsubscribe();
-
-        //signOut(); // 開発中だけ
-    }, []);
-
-    useFocusEffect(
-        useCallback(() => {
-            console.log("useFocusEffect triggered");
-
-            load();
-
-            return () => { };
-        }, [])
-    );
+    }, [find]);
 
     return (
         <View style={{ flex: 1, padding: 8 }}>
@@ -209,7 +214,7 @@ function ListBoard() {
                     padding: 1,
                 }}
             />
-            <Button mode="contained" onPress={() => setFind(input)}>
+            <Button mode="contained" onPress={async () => setFind(input)}>
                 フィルター
             </Button>
 
