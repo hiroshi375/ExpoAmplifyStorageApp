@@ -8,7 +8,7 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'react-native';
-import { uploadData, getUrl } from 'aws-amplify/storage';
+import { uploadData } from 'aws-amplify/storage';
 
 const client = generateClient<Schema>();
 
@@ -56,6 +56,7 @@ function CreateBoard() {
 
     // S3画像アップロード関数
     const uploadImage = async (uri: string) => {
+        console.log("NEW uploadImage called");
         try {
             const response = await fetch(uri);
             const blob = await response.blob();
@@ -68,16 +69,19 @@ function CreateBoard() {
                 options: {
                     contentType: 'image/jpeg',
                 },
-            });
+            }).result;
 
-            await uploadTask.result;
+            console.log("S3 upload success:", path);
+
+            //await uploadTask.result;
 
             // S3 URL取得
-            const urlResult = await getUrl({
-                path,
-            });
+            //const urlResult = await getUrl({
+            //    path,
+            //});
 
-            return urlResult.url.toString();
+            // ❗ URLではなく path を返す
+            return path;
 
         } catch (e) {
             console.error("UPLOAD ERROR:", e);
@@ -124,10 +128,11 @@ function CreateBoard() {
             }
 
             // 👇 画像アップロード
-            let imageUrl = null;
+            // let imageUrl = null;
+            let imagePath = null;
 
             if (imageUri) {
-                imageUrl = await uploadImage(imageUri);
+                imagePath = await uploadImage(imageUri);
             }
 
             // -----------------------------
@@ -138,7 +143,7 @@ function CreateBoard() {
                     {
                         message: fmsg,
                         name: user.name,
-                        image: imageUrl,
+                        image: imagePath, // S3のパスを保存
                         personID: user.id,
                     },
                     {

@@ -7,6 +7,7 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
 import { signOut } from 'aws-amplify/auth';
 import { BoardComponent } from '../../../ui-components';
+import { getUrl } from 'aws-amplify/storage';
 
 const client = generateClient<Schema>();
 
@@ -71,7 +72,49 @@ function ListBoard() {
                 new Date(b.createdAt).getTime() -
                 new Date(a.createdAt).getTime()
         );
-        setItems(sorted);
+
+        // 👇 S3 URL取得
+        const boardsWithUrls = await Promise.all(
+            sorted.map(async (item) => {
+
+                let imageUrl = null;
+
+                if (item.image) {
+                    try {
+                        // 既にURLならそのまま使用
+                        if (item.image.startsWith('http')) {
+
+                            console.log("EXISTING URL =", item.image);
+
+                            imageUrl = item.image;
+
+                        } else {
+
+                            // S3 path の場合だけ getUrl
+                            console.log("S3 PATH =", item.image);
+
+                            const urlResult = await getUrl({
+                                path: item.image,
+                            });
+
+                            imageUrl = urlResult.url.toString();
+
+                            //console.log("SIGNED URL =", imageUrl);
+                        }
+
+                    } catch (e) {
+                        console.error("getUrl error =", e);
+                    }
+                }
+
+                return {
+                    ...item,
+                    imageUrl,
+                };
+            })
+        );
+
+        setItems(boardsWithUrls);
     };
 
     useEffect(() => {
@@ -198,9 +241,9 @@ function ListBoard() {
                                     marginTop: 4,
                                 }}
                             >{item.message}</Text>
-                            {item.image && (
+                            {item.imageUrl && (
                                 <Image
-                                    source={{ uri: item.image }}
+                                    source={{ uri: item.imageUrl }}
                                     style={{ width: 100, height: 100 }}
                                 />
                             )}
