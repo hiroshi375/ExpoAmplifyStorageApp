@@ -6,5 +6,8 @@ export const storage = defineStorage({
         'images/*': [
             allow.authenticated.to(['read', 'write']),
         ],
+        'resized/*': [
+            allow.authenticated.to(['read']),
+        ],
     }),
 });
