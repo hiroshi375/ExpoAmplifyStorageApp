@@ -13,6 +13,7 @@ import { PaperProvider } from 'react-native-paper';
 import { Hub } from '@aws-amplify/core';
 import type { HubPayload } from '@aws-amplify/core';
 import CreateProfileScreen from './src/features/board/CreateProfileScreen';
+import { I18n } from 'aws-amplify/utils';
 
 type AmplifyAuthEvent =
     | { event: 'signedIn'; data: { username: string; userId: string } }
@@ -28,6 +29,30 @@ type AmplifyAuthHubPayload = HubPayload<AmplifyAuthEvent>;
 type Props = {
     onComplete: () => void;
 };
+
+I18n.putVocabularies({
+    ja: {
+        'Sign in': 'サインイン',
+        'Sign In': 'サインイン',
+        'Sign Up': '新規登録',
+        'Email': 'メールアドレス',
+        'Username': 'ユーザー名',
+        'Password': 'パスワード',
+        'Forgot Password?': 'パスワードを忘れた場合',
+        'Reset Password': 'パスワード再設定',
+        'Create Account': 'アカウント作成',
+        'Confirm Sign Up': '登録確認',
+        'Enter your email': 'メールアドレスを入力',
+        'Enter your username': 'ユーザー名を入力',
+        'Enter your password': 'パスワードを入力',
+        'Send code': 'コードを送信',
+        'Back to Sign In': 'サインインに戻る',
+        'Confirm': '確認',
+        'Resend code': 'コードを再送信',
+    },
+});
+
+I18n.setLanguage('ja');
 
 const Stack = createNativeStackNavigator();
 const client = generateClient<Schema>();
