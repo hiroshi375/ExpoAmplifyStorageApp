@@ -25,6 +25,7 @@ export const schema = a.schema({
     Board: a
         .model({
             message: a.string().required(),
+            description: a.string(), // ← 追加（既存データは影響なし）
             name: a.string(),
             image: a.string(),
             personID: a.id().required(),

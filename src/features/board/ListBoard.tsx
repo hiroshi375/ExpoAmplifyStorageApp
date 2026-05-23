@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, FlatList, Image } from 'react-native';
+import { View, FlatList, Image, StyleSheet } from 'react-native';
 import { TextInput, Button, Card, Text, FAB, Appbar } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -26,6 +26,45 @@ type RootStackParamList = {
     ListBoard: undefined;
     CreateBoard: undefined;
 };
+
+const styles = StyleSheet.create({
+
+    name: {
+        fontSize: 14,
+        color: '#888',
+    },
+
+    message: {
+        fontSize: 16,
+        color: '#000',
+        marginTop: 4,
+    },
+
+    middleRow: {
+        flexDirection: 'row',
+        marginTop: 8,
+        alignItems: 'flex-start',
+    },
+
+    image: {
+        width: 100,
+        height: 100,
+        borderRadius: 8,
+        marginRight: 12,
+    },
+
+    description: {
+        flex: 1,           // ← 重要（右側いっぱい使う）
+        fontSize: 13,
+        color: '#666',
+    },
+
+    date: {
+        fontSize: 12,
+        color: '#aaa',
+        marginTop: 8,
+    },
+});
 
 function ListBoard() {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ListBoard'>>();
@@ -230,6 +269,7 @@ function ListBoard() {
 
                     <Card style={{ marginBottom: 10 }}>
                         <Card.Content>
+                            {/* 共通：name */}
                             <Text
                                 style={{
                                     fontSize: 14,
@@ -238,6 +278,7 @@ function ListBoard() {
                                     marginTop: 4,
                                 }}
                             >{item.name}</Text>
+                            {/* 共通：message */}
                             <Text
                                 style={{
                                     fontSize: 16,
@@ -246,12 +287,18 @@ function ListBoard() {
                                     marginTop: 4,
                                 }}
                             >{item.message}</Text>
-                            {item.imageUrl && (
-                                <Image
-                                    source={{ uri: item.imageUrl }}
-                                    style={{ width: 100, height: 100 }}
-                                />
-                            )}
+                            {/* 中段：Image + description（横並び） */}
+                            <View style={styles.middleRow}>
+                                {item.imageUrl && (
+                                    <Image
+                                        source={{ uri: item.imageUrl }}
+                                        style={styles.image}
+                                    />
+                                )}
+                                <Text style={styles.description}>
+                                    {item.description ?? ''}
+                                </Text>
+                            </View>
                             <Text
                                 style={{
                                     fontSize: 14,

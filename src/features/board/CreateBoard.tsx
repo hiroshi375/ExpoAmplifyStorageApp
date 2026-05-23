@@ -23,6 +23,7 @@ function CreateBoard() {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'CreateBoard'>>();
     //const [fmsg, setFmsg] = useState("");
     //const [femail, setFemail] = useState("");
+    const [description, setDescription] = useState('');
 
     // 👇 追加：Person関連
     const [people, setPeople] = useState<any[]>([]);
@@ -112,7 +113,7 @@ function CreateBoard() {
     const onCreate = async () => {
         try {
             if (!fmsg || fmsg.trim() === "") {
-                Alert.alert("エラー", "メッセージは必須です");
+                Alert.alert("エラー", "タイトルは必須です");
                 return;
             }
             if (!selectedPersonId) {
@@ -142,6 +143,7 @@ function CreateBoard() {
                 const result = await client.models.Board.create(
                     {
                         message: fmsg,
+                        description: description, // 追加
                         name: user.name,
                         image: imagePath, // S3のパスを保存
                         personID: user.id,
@@ -162,6 +164,7 @@ function CreateBoard() {
 
             // 入力リセット
             setFmsg("");
+            setDescription("");
             setImageUri(null);
             setSelectedPersonId(null);
 
@@ -180,15 +183,28 @@ function CreateBoard() {
                 <Card.Content>
                     <Text variant="titleLarge">Create Board</Text>
                     <TextInput
-                        label="Message"
+                        label="Title"
                         value={fmsg}
                         onChangeText={setFmsg}
                         mode="outlined"
                         style={{ marginTop: 10 }}
                     />
                     <Text style={{ color: 'red', fontSize: 10 }}>
-                        {!fmsg?.trim() && "メッセージを入力してください"}
+                        {!fmsg?.trim() && "タイトルを入力してください"}
                     </Text>
+                    <TextInput
+                        label="詳細説明を入力"
+                        value={description}
+                        onChangeText={setDescription}
+                        mode="outlined"
+                        multiline
+                        numberOfLines={5}
+                        style={{
+                            marginTop: 10,
+                            fontSize: 16,
+                            minHeight: 120
+                        }}
+                    />
                     {/* 👇 ユーザー選択 */}
                     <List.Accordion
                         title={selectedPersonId
