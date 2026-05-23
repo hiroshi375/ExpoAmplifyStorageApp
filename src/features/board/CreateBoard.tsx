@@ -25,6 +25,9 @@ function CreateBoard() {
     //const [femail, setFemail] = useState("");
     const [description, setDescription] = useState('');
 
+    const [imagePath, setImagePath] = useState<string | null>(null);
+    const [loadingAI, setLoadingAI] = useState(false);
+
     // 👇 追加：Person関連
     const [people, setPeople] = useState<any[]>([]);
     //const [selectedPersonId, setSelectedPersonId] = useState("");
@@ -90,6 +93,57 @@ function CreateBoard() {
         }
     };
 
+    // AI生成関数
+    const generateByAI = async () => {
+        try {
+            if (!imageUri) {
+                Alert.alert("エラー", "画像を選択してください");
+                return;
+            }
+
+            setLoadingAI(true);
+
+            // -----------------------------
+            // ① S3アップロード
+            // -----------------------------
+            const uploadedPath = await uploadImage(imageUri);
+
+            setImagePath(uploadedPath);
+
+            // -----------------------------
+            // ② Bedrock実行
+            // -----------------------------
+            const API_URL =
+                "https://u4v1f505h9.execute-api.ap-northeast-1.amazonaws.com/stg/generate-board-text";
+
+            const aiResult = await fetch(API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    imageKey: uploadedPath,
+                }),
+            });
+
+            const json = await aiResult.json();
+
+            console.log("AI RESULT:", json);
+
+            // Bedrock結果を画面へ反映
+            setFmsg(json.message || "");
+            setDescription(json.description || "");
+
+            Alert.alert("成功", "AI生成が完了しました");
+
+        } catch (e) {
+            console.error(e);
+            Alert.alert("エラー", "AI生成に失敗しました");
+        } finally {
+            setLoadingAI(false);
+        }
+    };
+
     // -----------------------------
     // Person一覧取得
     // -----------------------------
@@ -142,7 +196,7 @@ function CreateBoard() {
             try {
                 const result = await client.models.Board.create(
                     {
-                        message: fmsg,
+                        message: fmsg, // 画像から生成されたタイトル
                         description: description, // 追加
                         name: user.name,
                         image: imagePath, // S3のパスを保存
@@ -259,6 +313,15 @@ function CreateBoard() {
                     >
                         画像選択
                     </Button>
+                    <Button
+                        mode="contained"
+                        onPress={generateByAI}
+                        style={{ marginTop: 10 }}
+                        loading={loadingAI}
+                        disabled={!imageUri || loadingAI}
+                    >
+                        画像アップロード
+                    </Button>
                     {imageUri && (
                         <Image
                             source={{ uri: imageUri }}
@@ -274,7 +337,12 @@ function CreateBoard() {
                         mode="contained"
                         onPress={onCreate}
                         style={{ marginTop: 20 }}
-                        disabled={!fmsg || fmsg.trim() === "" || !selectedPersonId}
+                        disabled={
+                            !fmsg ||
+                            fmsg.trim() === "" ||
+                            !selectedPersonId ||
+                            !imagePath // 画像アップロードが完了していない場合は投稿できないようにする
+                        }
                     >
                         投稿
                     </Button>
