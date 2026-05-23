@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, FlatList, Image, StyleSheet } from 'react-native';
+import { View, FlatList, Image, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { TextInput, Button, Card, Text, FAB, Appbar } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -156,6 +156,45 @@ function ListBoard() {
         setItems(boardsWithUrls);
     };
 
+    // -----------------------------
+    // 削除
+    // -----------------------------
+    const deleteBoard = async (id: string) => {
+        Alert.alert(
+            "削除確認",
+            "この投稿を削除しますか？",
+            [
+                {
+                    text: "キャンセル",
+                    style: "cancel",
+                },
+                {
+                    text: "OK",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await client.models.Board.delete(
+                                { id },
+                                {
+                                    authMode: 'userPool',
+                                }
+                            );
+
+                            Alert.alert("成功", "削除しました");
+
+                            // 一覧更新
+                            await load();
+
+                        } catch (e) {
+                            console.error(e);
+                            Alert.alert("エラー", "削除に失敗しました");
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     useEffect(() => {
 
         let subscription: any;
@@ -266,8 +305,9 @@ function ListBoard() {
                     paddingBottom: 120, // FABのスペース確保
                 }}
                 renderItem={({ item }) => (
-
-                    <Card style={{ marginBottom: 10 }}>
+                    <Card style={{ marginBottom: 10 }}
+                        onPress={() => deleteBoard(item.id)}
+                    >
                         <Card.Content>
                             {/* 共通：name */}
                             <Text
@@ -278,7 +318,7 @@ function ListBoard() {
                                     marginTop: 4,
                                 }}
                             >{item.name}</Text>
-                            {/* 共通：message */}
+                            {/* 共通：message:タイトル */}
                             <Text
                                 style={{
                                     fontSize: 16,
@@ -295,6 +335,7 @@ function ListBoard() {
                                         style={styles.image}
                                     />
                                 )}
+                                {/* description: 画像がない場合もdescriptionは表示させる */}
                                 <Text style={styles.description}>
                                     {item.description ?? ''}
                                 </Text>
