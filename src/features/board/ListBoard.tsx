@@ -123,14 +123,14 @@ function ListBoard() {
                         // 既にURLならそのまま使用
                         if (item.image.startsWith('http')) {
 
-                            console.log("EXISTING URL =", item.image);
+                            //console.log("EXISTING URL =", item.image);
 
                             imageUrl = item.image;
 
                         } else {
 
                             // S3 path の場合だけ getUrl
-                            console.log("S3 PATH =", item.image);
+                            //console.log("S3 PATH =", item.image);
 
                             const urlResult = await getUrl({
                                 path: item.image,
@@ -285,6 +285,7 @@ function ListBoard() {
             <TextInput
                 value={input}
                 onChangeText={setInput}
+                mode="outlined"
                 style={{
                     fontSize: 16,
                     borderWidth: 1,
@@ -325,6 +326,7 @@ function ListBoard() {
                                     color: '#000',
                                     lineHeight: 22,
                                     marginTop: 4,
+                                    fontWeight: 'bold',
                                 }}
                             >{item.message}</Text>
                             {/* 中段：Image + description（横並び） */}
