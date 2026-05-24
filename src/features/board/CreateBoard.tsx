@@ -9,6 +9,7 @@ import type { Schema } from '../../../amplify/data/resource';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'react-native';
 import { uploadData } from 'aws-amplify/storage';
+import { getCurrentUser } from 'aws-amplify/auth';
 
 const client = generateClient<Schema>();
 
@@ -144,92 +145,112 @@ function CreateBoard() {
         }
     };
 
-    // -----------------------------
-    // Person一覧取得
-    // -----------------------------
     useEffect(() => {
         const fetchPeople = async () => {
-            const result = await client.models.Person.list({
-                authMode: 'userPool',
-            });
-            setPeople(result.data);
+            try {
+
+                // -----------------------------
+                // Person一覧取得
+                // -----------------------------
+                const result = await client.models.Person.list({
+                    authMode: 'userPool',
+                });
+
+                setPeople(result.data);
+
+                // -----------------------------
+                // ログインユーザー取得
+                // -----------------------------
+                const currentUser = await getCurrentUser();
+
+                console.log("currentUser =", currentUser);
+
+                // username or userId に一致するPersonを探す
+                const loginPerson = result.data.find(
+                    (p: any) =>
+                        p.email === currentUser.signInDetails?.loginId
+                );
+
+                // -----------------------------
+                // デフォルト選択
+                // -----------------------------
+                if (loginPerson) {
+                    setSelectedPersonId(loginPerson.id);
+                }
+
+            } catch (e) {
+                console.error("fetchPeople error =", e);
+            }
         };
 
         fetchPeople();
-        console.log("selectedPerson updated:", JSON.stringify(selectedPerson, null, 2)); // 👈 追加
-        //    }, [selectedPersonId]);
-    }, []); // 初回レンダリング時のみ取得
 
+    }, []);
 
     // -----------------------------
     // 作成処理
     // -----------------------------
     const onCreate = async () => {
         try {
+
             if (!fmsg || fmsg.trim() === "") {
                 Alert.alert("エラー", "タイトルは必須です");
                 return;
             }
+
             if (!selectedPersonId) {
                 Alert.alert("エラー", "ユーザーを選択してください");
                 return;
             }
-            // Person取得（確認用）
-            const user = people.find(p => p.id === selectedPersonId);
+
+            if (!imagePath) {
+                Alert.alert("エラー", "先に画像アップロードをしてください");
+                return;
+            }
+
+            // Person取得
+            const user = people.find(
+                (p) => p.id === selectedPersonId
+            );
 
             if (!user) {
                 Alert.alert("エラー", "ユーザーが見つかりません");
                 return;
             }
 
-            // 👇 画像アップロード
-            // let imageUrl = null;
-            let imagePath = null;
-
-            if (imageUri) {
-                imagePath = await uploadImage(imageUri);
-            }
-
             // -----------------------------
-            // ② Board作成
+            // Board作成
             // -----------------------------
-            try {
-                const result = await client.models.Board.create(
-                    {
-                        message: fmsg, // 画像から生成されたタイトル
-                        description: description, // 追加
-                        name: user.name,
-                        image: imagePath, // S3のパスを保存
-                        personID: user.id,
-                    },
-                    {
-                        authMode: 'userPool', // 👈 これを追加
-                    }
-                );
-                console.log("Board created successfully", result);
-                console.log("FULL RESULT:", JSON.stringify(result, null, 2));
-                Alert.alert("成功", "メッセージを投稿しました。");
+            const result = await client.models.Board.create(
+                {
+                    message: fmsg,
+                    description: description,
+                    name: user.name,
+                    image: imagePath,
+                    personID: user.id,
+                },
+                {
+                    authMode: 'userPool',
+                }
+            );
 
-            } catch (e) {
-                console.error("Error creating Board:", e);
-                Alert.alert("エラー", "Boardの作成に失敗しました。");
-                return;
-            }
+            console.log("Board created =", result);
 
-            // 入力リセット
+            Alert.alert("成功", "投稿しました");
+
+            // リセット
             setFmsg("");
             setDescription("");
             setImageUri(null);
-            setSelectedPersonId(null);
+            setImagePath(null);
 
             navigation.goBack();
 
         } catch (e) {
             console.error(e);
-            Alert.alert("エラー", "投稿に失敗しました。");
+            Alert.alert("エラー", "投稿に失敗しました");
         }
     };
-
 
     return (
         <View style={{ flex: 1, padding: 16 }}>
