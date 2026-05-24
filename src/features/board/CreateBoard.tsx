@@ -38,7 +38,7 @@ function CreateBoard() {
     // 選択されたPersonの情報を保持（確認用）
     //const [selectedPerson, setSelectedPerson] = useState<any>(null);
     // 👇 表示用（ここ重要）
-    const selectedPerson = people.find(p => p.id === selectedPersonId);
+    const selectedPerson = people.find(p => p.id === selectedPersonId) ?? null;
 
     // 画像選択関数
     const pickImage = async () => {
@@ -282,9 +282,8 @@ function CreateBoard() {
                     />
                     {/* 👇 ユーザー選択 */}
                     <List.Accordion
-                        title={selectedPersonId
-                            ? people.find(p => p.id === selectedPersonId)?.name
-                            : "ユーザー選択"
+                        title={
+                            selectedPerson?.name || "ユーザー選択"
                         }
                         expanded={expanded}
                         onPress={() => setExpanded(!expanded)}
