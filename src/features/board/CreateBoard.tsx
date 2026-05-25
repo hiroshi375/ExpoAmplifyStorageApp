@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'react-native';
 import { uploadData } from 'aws-amplify/storage';
 import { getCurrentUser } from 'aws-amplify/auth';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const client = generateClient<Schema>();
 
@@ -51,11 +52,34 @@ function CreateBoard() {
         }
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 1,
+            quality: 0.3, // 画質を下げてサイズを小さくする
         });
 
         if (!result.canceled) {
-            setImageUri(result.assets[0].uri);
+            // -----------------------------
+            // 画像リサイズ
+            // -----------------------------
+            const manipulatedImage =
+                await ImageManipulator.manipulateAsync(
+                    result.assets[0].uri,
+                    [
+                        {
+                            resize: {
+                                width: 1024,
+                            },
+                        },
+                    ],
+                    {
+                        compress: 0.3,
+                        format: ImageManipulator.SaveFormat.JPEG,
+                    }
+                );
+
+            console.log(
+                "RESIZED IMAGE =",
+                manipulatedImage
+            );
+            setImageUri(manipulatedImage.uri);
         }
     };
 
@@ -128,7 +152,10 @@ function CreateBoard() {
             });
 
             const json = await aiResult.json();
-
+            if (!json.ok) {
+                Alert.alert("エラー", json.error);
+                return;
+            }
             console.log("AI RESULT:", json);
 
             // Bedrock結果を画面へ反映
