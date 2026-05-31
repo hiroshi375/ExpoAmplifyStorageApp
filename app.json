@@ -1,31 +1,36 @@
 {
-    "expo": {
-        "name": "ExpoAmplifyStorageApp",
-        "slug": "ExpoAmplifyStorageApp",
-        "version": "1.0.0",
-        "orientation": "portrait",
-        "icon": "./assets/icon.png",
-        "userInterfaceStyle": "light",
-        "splash": {
-            "image": "./assets/splash-icon.png",
-            "resizeMode": "contain",
-            "backgroundColor": "#ffffff"
-        },
-        "ios": {
-            "supportsTablet": true,
-            "bundleIdentifier": "com.anonymous.ExpoAmplifyStorageApp"
-        },
-        "android": {
-            "adaptiveIcon": {
-                "foregroundImage": "./assets/icon.png",
-                "backgroundColor": "#ffffff"
-            },
-            "edgeToEdgeEnabled": true,
-            "predictiveBackGestureEnabled": false,
-            "package": "com.satouhiroshi.expoamplifystorageapp"
-        },
-        "web": {
-            "favicon": "./assets/favicon.png"
-        }
+  "expo": {
+    "name": "ExpoAmplifyStorageApp",
+    "slug": "ExpoAmplifyStorageApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.ExpoAmplifyStorageApp"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.satouhiroshi.expoamplifystorageapp"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4e0e2ed1-d3cc-4753-8286-1dabaa6dd3ec"
+      }
     }
+  }
 }
