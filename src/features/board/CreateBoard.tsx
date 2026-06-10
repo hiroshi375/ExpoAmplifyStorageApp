@@ -53,6 +53,11 @@ function CreateBoard() {
     const selectedPerson =
         people.find((p) => p.id === selectedPersonId) ?? null;
 
+    // 追加：公開範囲
+    const [visibility, setVisibility] = useState<"public" | "private">(
+        "private",
+    );
+
     // 画像リサイズ関数
     const resizeImage = async (uri: string) => {
         const manipulatedImage = await ImageManipulator.manipulateAsync(
@@ -301,6 +306,7 @@ function CreateBoard() {
                 return;
             }
 
+            const currentUser = await getCurrentUser();
             // -----------------------------
             // Board作成
             // -----------------------------
@@ -311,6 +317,8 @@ function CreateBoard() {
                     name: user.name,
                     image: imagePath,
                     personID: user.id,
+                    visibility: visibility, // "public" or "private"
+                    ownerUserId: currentUser.userId,
                 },
                 {
                     authMode: "userPool",
