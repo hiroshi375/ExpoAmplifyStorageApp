@@ -306,6 +306,7 @@ function CreateBoard() {
                 return;
             }
 
+            // 追加：現在のCognitoユーザー情報も取得しておく
             const currentUser = await getCurrentUser();
             // -----------------------------
             // Board作成
@@ -419,13 +420,47 @@ function CreateBoard() {
                     <Text style={{ color: "red", fontSize: 10 }}>
                         {!selectedPersonId && "ユーザーを選択してください"}
                     </Text>
-                    {/*<TextInput
-                        label="Image URL"
-                        value={fimg}
-                        onChangeText={setFimg}
-                        mode="outlined"
-                        style={{ marginTop: 10 }}
-                    />*/}
+                    <Text
+                        style={{
+                            marginTop: 10,
+                            fontSize: 14,
+                            fontWeight: "bold",
+                        }}
+                    >
+                        公開設定
+                    </Text>
+
+                    <View
+                        style={{
+                            flexDirection: "row",
+                            gap: 8,
+                            marginTop: 8,
+                        }}
+                    >
+                        <Button
+                            mode={
+                                visibility === "private"
+                                    ? "contained"
+                                    : "outlined"
+                            }
+                            onPress={() => setVisibility("private")}
+                            style={{ flex: 1 }}
+                        >
+                            自分だけ
+                        </Button>
+
+                        <Button
+                            mode={
+                                visibility === "public"
+                                    ? "contained"
+                                    : "outlined"
+                            }
+                            onPress={() => setVisibility("public")}
+                            style={{ flex: 1 }}
+                        >
+                            共有する
+                        </Button>
+                    </View>
                     <Button
                         mode="outlined"
                         onPress={pickImage}
