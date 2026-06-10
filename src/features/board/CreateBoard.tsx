@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Alert } from "react-native";
+import { View, Alert, ScrollView } from "react-native";
 import { TextInput, Button, Card, Text, List } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -335,7 +335,14 @@ function CreateBoard() {
     };
 
     return (
-        <View style={{ flex: 1, padding: 16 }}>
+        <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+                padding: 16,
+                paddingBottom: 40,
+            }}
+            keyboardShouldPersistTaps="handled"
+        >
             <Card>
                 <Card.Content>
                     <TextInput
@@ -476,7 +483,7 @@ function CreateBoard() {
                     </Button>
                 </Card.Content>
             </Card>
-        </View>
+        </ScrollView>
     );
 }
 
