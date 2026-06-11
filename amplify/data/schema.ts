@@ -39,6 +39,11 @@ export const schema = a.schema({
             person: a.belongsTo("Person", "personID"),
         })
         .authorization((allow) => [
-            allow.authenticated(), // 認証ユーザーは全員アクセス可能
+            // 認証ユーザーは全員読み取り可能
+            allow.authenticated().to(["read"]),
+            // 投稿者のみ全権限を
+            allow
+                .ownerDefinedIn("ownerUserId")
+                .to(["create", "update", "delete"]),
         ]),
 });
