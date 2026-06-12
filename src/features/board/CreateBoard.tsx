@@ -311,22 +311,32 @@ function CreateBoard() {
             // -----------------------------
             // Board作成
             // -----------------------------
-            const result = await client.models.Board.create(
-                {
-                    message: fmsg,
-                    description: description,
-                    name: user.name,
-                    image: imagePath,
-                    personID: user.id,
-                    visibility: visibility, // "public" or "private"
-                    ownerUserId: currentUser.userId,
-                },
-                {
-                    authMode: "userPool",
-                },
-            );
+            const boardInput = {
+                message: fmsg,
+                description: description,
+                name: user.name,
+                image: imagePath,
+                ownerUserId: currentUser.userId,
+                personID: user.id,
+            };
 
-            console.log("Board created =", result);
+            if (visibility === "public") {
+                const result = await client.models.PublicBoard.create(
+                    boardInput,
+                    {
+                        authMode: "userPool",
+                    },
+                );
+                console.log("PublicBoard created =", result);
+            } else {
+                const result = await client.models.PrivateBoard.create(
+                    boardInput,
+                    {
+                        authMode: "userPool",
+                    },
+                );
+                console.log("PrivateBoard created =", result);
+            }
 
             Alert.alert("成功", "投稿しました");
 

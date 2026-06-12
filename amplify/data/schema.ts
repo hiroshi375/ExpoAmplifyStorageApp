@@ -18,6 +18,8 @@ export const schema = a.schema({
             age: a.integer(),
             tel: a.phone(),
             boards: a.hasMany("Board", "personID"),
+            publicBoards: a.hasMany("PublicBoard", "personID"),
+            privateBoards: a.hasMany("PrivateBoard", "personID"),
         })
         .authorization((allow) => [
             allow.authenticated(), // 認証ユーザーは全員アクセス可能
@@ -45,5 +47,44 @@ export const schema = a.schema({
             allow
                 .ownerDefinedIn("ownerUserId")
                 .to(["create", "update", "delete"]),
+        ]),
+
+    PublicBoard: a
+        .model({
+            message: a.string().required(),
+            description: a.string(),
+            name: a.string(),
+            image: a.string(),
+
+            ownerUserId: a.string().required(),
+
+            personID: a.id().required(),
+            person: a.belongsTo("Person", "personID"),
+        })
+        .authorization((allow) => [
+            // 認証ユーザーは全員読み取り可能
+            allow.authenticated().to(["read"]),
+
+            // 投稿者本人だけ作成・更新・削除可能
+            allow
+                .ownerDefinedIn("ownerUserId")
+                .to(["create", "update", "delete"]),
+        ]),
+
+    PrivateBoard: a
+        .model({
+            message: a.string().required(),
+            description: a.string(),
+            name: a.string(),
+            image: a.string(),
+
+            ownerUserId: a.string().required(),
+
+            personID: a.id().required(),
+            person: a.belongsTo("Person", "personID"),
+        })
+        .authorization((allow) => [
+            // 投稿者本人だけ全操作可能
+            allow.ownerDefinedIn("ownerUserId"),
         ]),
 });

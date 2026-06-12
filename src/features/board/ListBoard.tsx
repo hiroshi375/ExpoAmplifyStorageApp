@@ -106,113 +106,97 @@ function ListBoard() {
     const [find, setFind] = useState("");
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-    // 追加：現在のユーザーIDを取得して状態に保存
-    const canViewBoard = (item: any, userId: string) => {
-        return (
-            item.visibility === "public" ||
-            item.ownerUserId === userId ||
-            !item.visibility // 既存データ移行用。既存投稿も一旦表示する
-        );
-    };
-
     // 追加：削除可能かどうかの判定関数
     const canDeleteBoard = (item: any) => {
         return currentUserId !== null && item.ownerUserId === currentUserId;
-    };
-    // -----------------------------
-    // 検索入力
-    // -----------------------------
-    const doChange = (e: any) => {
-        setInput(e.target.value);
-    };
-
-    const doFilter = () => {
-        setFind(input);
     };
 
     // -----------------------------
     // データ取得
     // -----------------------------
     const load = async () => {
-        let result;
+        try {
+            const currentUser = await getCurrentUser();
+            setCurrentUserId(currentUser.userId);
 
-        if (find) {
-            const filter = {
-                or: [
-                    { name: { contains: find } },
-                    { message: { contains: find } },
-                ],
-            } as any;
+            let filter = undefined;
 
-            result = await client.models.Board.list({
+            if (find.trim()) {
+                filter = {
+                    or: [
+                        { name: { contains: find } },
+                        { message: { contains: find } },
+                    ],
+                } as any;
+            }
+
+            const publicResult = await client.models.PublicBoard.list({
                 filter,
                 authMode: "userPool",
             });
-            //console.log("取得結果:", result);
-            //console.log("Boardデータ本体:", result.data);
-        } else {
-            result = await client.models.Board.list({ authMode: "userPool" });
-            //console.log("取得結果:", result);
-            //console.log("Boardデータ本体:", result.data);
-        }
-        // 追加：現在のユーザーIDを取得して状態に保存
-        const currentUser = await getCurrentUser();
-        setCurrentUserId(currentUser.userId);
 
-        // 追加：表示可能な投稿だけに絞る
-        const visibleData = result.data.filter((item: any) =>
-            canViewBoard(item, currentUser.userId),
-        );
-        // 👇 追加：新しい順にソート
-        const sorted = [...visibleData].sort(
-            (a, b) =>
-                new Date(b.createdAt).getTime() -
-                new Date(a.createdAt).getTime(),
-        );
+            const privateResult = await client.models.PrivateBoard.list({
+                filter,
+                authMode: "userPool",
+            });
 
-        // 👇 S3 URL取得
-        const boardsWithUrls = await Promise.all(
-            sorted.map(async (item) => {
-                let imageUrl = null;
+            const publicBoards = publicResult.data.map((item) => ({
+                ...item,
+                visibility: "public",
+                boardType: "public",
+            }));
 
-                if (item.image) {
-                    try {
-                        // 既にURLならそのまま使用
-                        if (item.image.startsWith("http")) {
-                            //console.log("EXISTING URL =", item.image);
+            const privateBoards = privateResult.data.map((item) => ({
+                ...item,
+                visibility: "private",
+                boardType: "private",
+            }));
 
-                            imageUrl = item.image;
-                        } else {
-                            // S3 path の場合だけ getUrl
-                            //console.log("S3 PATH =", item.image);
+            const merged = [...publicBoards, ...privateBoards];
 
-                            const urlResult = await getUrl({
-                                path: item.image,
-                            });
+            const sorted = merged.sort(
+                (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime(),
+            );
 
-                            imageUrl = urlResult.url.toString();
+            const boardsWithUrls = await Promise.all(
+                sorted.map(async (item) => {
+                    let imageUrl = null;
 
-                            //console.log("SIGNED URL =", imageUrl);
+                    if (item.image) {
+                        try {
+                            if (item.image.startsWith("http")) {
+                                imageUrl = item.image;
+                            } else {
+                                const urlResult = await getUrl({
+                                    path: item.image,
+                                });
+
+                                imageUrl = urlResult.url.toString();
+                            }
+                        } catch (e) {
+                            console.error("getUrl error =", e);
                         }
-                    } catch (e) {
-                        console.error("getUrl error =", e);
                     }
-                }
 
-                return {
-                    ...item,
-                    imageUrl,
-                };
-            }),
-        );
+                    return {
+                        ...item,
+                        imageUrl,
+                    };
+                }),
+            );
 
-        setItems(boardsWithUrls);
+            setItems(boardsWithUrls);
+        } catch (e) {
+            console.error("load error =", e);
+            Alert.alert("エラー", "投稿一覧の取得に失敗しました");
+        }
     };
-
     // -----------------------------
     // 削除
     // -----------------------------
-    const deleteBoard = async (id: string) => {
+    const deleteBoard = async (item: any) => {
         Alert.alert("削除確認", "この投稿を削除しますか？", [
             {
                 text: "キャンセル",
@@ -223,16 +207,30 @@ function ListBoard() {
                 style: "destructive",
                 onPress: async () => {
                     try {
-                        await client.models.Board.delete(
-                            { id },
-                            {
-                                authMode: "userPool",
-                            },
-                        );
+                        if (item.boardType === "public") {
+                            await client.models.PublicBoard.delete(
+                                { id: item.id },
+                                {
+                                    authMode: "userPool",
+                                },
+                            );
+                        } else if (item.boardType === "private") {
+                            await client.models.PrivateBoard.delete(
+                                { id: item.id },
+                                {
+                                    authMode: "userPool",
+                                },
+                            );
+                        } else {
+                            Alert.alert(
+                                "エラー",
+                                "投稿種別が不明のため削除できません",
+                            );
+                            return;
+                        }
 
                         Alert.alert("成功", "削除しました");
 
-                        // 一覧更新
                         await load();
                     } catch (e) {
                         console.error(e);
@@ -243,83 +241,17 @@ function ListBoard() {
         ]);
     };
 
+    // 画面がフォーカスされるたびにload()を呼び出す
     useEffect(() => {
-        let subscription: any;
-
-        const startObserve = async () => {
-            const currentUser = await getCurrentUser();
-            setCurrentUserId(currentUser.userId);
-            let filter = undefined;
-
-            // フィルター条件
-            if (find.trim()) {
-                filter = {
-                    or: [
-                        { name: { contains: find } },
-                        { message: { contains: find } },
-                    ],
-                } as any;
-            }
-
-            subscription = client.models.Board.observeQuery({
-                filter,
-                authMode: "userPool",
-            }).subscribe({
-                next: async ({ items }) => {
-                    const visibleItems = items.filter((item: any) =>
-                        canViewBoard(item, currentUser.userId),
-                    );
-                    const sorted = [...visibleItems].sort(
-                        (a, b) =>
-                            new Date(b.createdAt).getTime() -
-                            new Date(a.createdAt).getTime(),
-                    );
-
-                    const boardsWithUrls = await Promise.all(
-                        sorted.map(async (item) => {
-                            let imageUrl = null;
-
-                            if (item.image) {
-                                try {
-                                    // 既にURLならそのまま
-                                    if (item.image.startsWith("http")) {
-                                        imageUrl = item.image;
-                                    } else {
-                                        const urlResult = await getUrl({
-                                            path: item.image,
-                                        });
-
-                                        imageUrl = urlResult.url.toString();
-                                    }
-                                } catch (e) {
-                                    console.error("getUrl error =", e);
-                                }
-                            }
-
-                            return {
-                                ...item,
-                                imageUrl,
-                            };
-                        }),
-                    );
-
-                    setItems(boardsWithUrls);
-                },
-
-                error: (error) => {
-                    console.error(error);
-                },
-            });
-        };
-
-        startObserve();
-
-        return () => {
-            if (subscription) {
-                subscription.unsubscribe();
-            }
-        };
+        load();
     }, [find]);
+
+    // 画面がフォーカスされるたびにload()を呼び出す（useEffectと併用して二重呼び出しになるのを防ぐため、findを依存配列に入れる）
+    useFocusEffect(
+        useCallback(() => {
+            load();
+        }, [find]),
+    );
 
     return (
         <View style={{ flex: 1, padding: 8 }}>
@@ -352,7 +284,7 @@ function ListBoard() {
                         style={{ marginBottom: 10 }}
                         onPress={() => {
                             if (canDeleteBoard(item)) {
-                                deleteBoard(item.id);
+                                deleteBoard(item);
                             } else {
                                 Alert.alert(
                                     "削除できません",
