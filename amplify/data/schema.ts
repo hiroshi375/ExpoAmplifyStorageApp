@@ -60,6 +60,8 @@ export const schema = a.schema({
 
             personID: a.id().required(),
             person: a.belongsTo("Person", "personID"),
+
+            likes: a.hasMany("PublicBoardLike", "publicBoardID"),
         })
         .authorization((allow) => [
             // 認証ユーザーは全員読み取り可能
@@ -86,5 +88,20 @@ export const schema = a.schema({
         .authorization((allow) => [
             // 投稿者本人だけ全操作可能
             allow.ownerDefinedIn("ownerUserId"),
+        ]),
+
+    PublicBoardLike: a
+        .model({
+            publicBoardID: a.id().required(),
+            publicBoard: a.belongsTo("PublicBoard", "publicBoardID"),
+
+            ownerUserId: a.string().required(),
+        })
+        .authorization((allow) => [
+            // 認証ユーザーはいいね一覧を読める
+            allow.authenticated().to(["read"]),
+
+            // いいねした本人だけ作成・削除できる
+            allow.ownerDefinedIn("ownerUserId").to(["create", "delete"]),
         ]),
 });

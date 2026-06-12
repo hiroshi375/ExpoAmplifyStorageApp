@@ -7,7 +7,14 @@ import {
     Alert,
     TouchableOpacity,
 } from "react-native";
-import { TextInput, Button, Card, Text, FAB, Appbar } from "react-native-paper";
+import {
+    TextInput,
+    Button,
+    Card,
+    Text,
+    FAB,
+    IconButton,
+} from "react-native-paper";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { generateClient } from "aws-amplify/data";
@@ -140,16 +147,36 @@ function ListBoard() {
                 authMode: "userPool",
             });
 
-            const publicBoards = publicResult.data.map((item) => ({
-                ...item,
-                visibility: "public",
-                boardType: "public",
-            }));
+            const likeResult = await client.models.PublicBoardLike.list({
+                authMode: "userPool",
+            });
+
+            const likes = likeResult.data;
+
+            const publicBoards = publicResult.data.map((item) => {
+                const boardLikes = likes.filter(
+                    (like) => like.publicBoardID === item.id,
+                );
+
+                const likedByMe = boardLikes.some(
+                    (like) => like.ownerUserId === currentUser.userId,
+                );
+
+                return {
+                    ...item,
+                    visibility: "public",
+                    boardType: "public",
+                    likeCount: boardLikes.length,
+                    likedByMe,
+                };
+            });
 
             const privateBoards = privateResult.data.map((item) => ({
                 ...item,
                 visibility: "private",
                 boardType: "private",
+                likeCount: 0,
+                likedByMe: false,
             }));
 
             const merged = [...publicBoards, ...privateBoards];
@@ -239,6 +266,53 @@ function ListBoard() {
                 },
             },
         ]);
+    };
+
+    // いいねのトグル関数
+    const toggleLike = async (item: any) => {
+        try {
+            if (item.boardType !== "public") {
+                Alert.alert("対象外", "非公開投稿にはいいねできません");
+                return;
+            }
+
+            if (!currentUserId) {
+                Alert.alert("エラー", "ログインユーザーを取得できていません");
+                return;
+            }
+
+            const likeResult = await client.models.PublicBoardLike.list({
+                filter: {
+                    and: [
+                        { publicBoardID: { eq: item.id } },
+                        { ownerUserId: { eq: currentUserId } },
+                    ],
+                } as any,
+                authMode: "userPool",
+            });
+
+            const existingLike = likeResult.data[0];
+
+            if (existingLike) {
+                await client.models.PublicBoardLike.delete(
+                    { id: existingLike.id },
+                    { authMode: "userPool" },
+                );
+            } else {
+                await client.models.PublicBoardLike.create(
+                    {
+                        publicBoardID: item.id,
+                        ownerUserId: currentUserId,
+                    },
+                    { authMode: "userPool" },
+                );
+            }
+
+            await load();
+        } catch (e) {
+            console.error("toggleLike error =", e);
+            Alert.alert("エラー", "いいね処理に失敗しました");
+        }
     };
 
     // 画面がフォーカスされるたびにload()を呼び出す
@@ -350,6 +424,43 @@ function ListBoard() {
                                     {item.description ?? ""}
                                 </Text>
                             </View>
+                            {/* 下段：いいねボタン + いいね数 */}
+                            {item.boardType === "public" && (
+                                <View
+                                    style={{
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        marginTop: 8,
+                                        alignSelf: "flex-start",
+                                    }}
+                                >
+                                    <IconButton
+                                        icon={
+                                            (item.likeCount ?? 0) > 0
+                                                ? "heart"
+                                                : "heart-outline"
+                                        }
+                                        iconColor="#f06292"
+                                        size={18}
+                                        onPress={() => toggleLike(item)}
+                                        style={{
+                                            margin: 0,
+                                            width: 28,
+                                            height: 28,
+                                        }}
+                                    />
+
+                                    <Text
+                                        style={{
+                                            fontSize: 12,
+                                            color: "#f06292",
+                                            marginLeft: 2,
+                                        }}
+                                    >
+                                        {item.likeCount ?? 0}
+                                    </Text>
+                                </View>
+                            )}
                         </Card.Content>
                     </Card>
                 )}
