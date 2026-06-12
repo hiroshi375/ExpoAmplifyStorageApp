@@ -104,4 +104,16 @@ export const schema = a.schema({
             // いいねした本人だけ作成・削除できる
             allow.ownerDefinedIn("ownerUserId").to(["create", "delete"]),
         ]),
+
+    UserUsage: a
+        .model({
+            ownerUserId: a.string().required(),
+
+            postCount: a.integer().default(0),
+            aiCaptionCount: a.integer().default(0),
+
+            postLimit: a.integer().default(30),
+            aiCaptionLimit: a.integer().default(5),
+        })
+        .authorization((allow) => [allow.ownerDefinedIn("ownerUserId")]),
 });

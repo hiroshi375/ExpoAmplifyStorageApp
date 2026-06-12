@@ -195,6 +195,25 @@ function CreateBoard() {
 
             setLoadingAI(true);
 
+            const currentUser = await getCurrentUser();
+
+            const usage = await getOrCreateUserUsage(currentUser.userId);
+
+            if (!usage) {
+                Alert.alert("エラー", "利用状況を取得できませんでした");
+                return;
+            }
+
+            const aiCaptionCount = usage.aiCaptionCount ?? 0;
+            const aiCaptionLimit = usage.aiCaptionLimit ?? 5;
+
+            if (aiCaptionCount >= aiCaptionLimit) {
+                Alert.alert(
+                    "AI生成上限に達しました",
+                    `AIキャプション生成は ${aiCaptionLimit} 回までです。`,
+                );
+                return;
+            }
             // -----------------------------
             // ① S3アップロード
             // -----------------------------
@@ -230,6 +249,16 @@ function CreateBoard() {
             // Bedrock結果を画面へ反映
             setFmsg(json.message || "");
             setDescription(json.description || "");
+
+            await client.models.UserUsage.update(
+                {
+                    id: usage.id,
+                    aiCaptionCount: aiCaptionCount + 1,
+                },
+                {
+                    authMode: "userPool",
+                },
+            );
 
             Alert.alert("成功", "AI生成が完了しました");
         } catch (e) {
@@ -308,6 +337,24 @@ function CreateBoard() {
 
             // 追加：現在のCognitoユーザー情報も取得しておく
             const currentUser = await getCurrentUser();
+
+            const usage = await getOrCreateUserUsage(currentUser.userId);
+
+            if (!usage) {
+                Alert.alert("エラー", "利用状況を取得できませんでした");
+                return;
+            }
+
+            const postCount = usage.postCount ?? 0;
+            const postLimit = usage.postLimit ?? 30;
+
+            if (postCount >= postLimit) {
+                Alert.alert(
+                    "投稿上限に達しました",
+                    `投稿できる件数は ${postLimit} 件までです。`,
+                );
+                return;
+            }
             // -----------------------------
             // Board作成
             // -----------------------------
@@ -338,6 +385,15 @@ function CreateBoard() {
                 console.log("PrivateBoard created =", result);
             }
 
+            await client.models.UserUsage.update(
+                {
+                    id: usage.id,
+                    postCount: postCount + 1,
+                },
+                {
+                    authMode: "userPool",
+                },
+            );
             Alert.alert("成功", "投稿しました");
 
             // リセット
@@ -351,6 +407,39 @@ function CreateBoard() {
             console.error(e);
             Alert.alert("エラー", "投稿に失敗しました");
         }
+    };
+
+    // 追加：UserUsageの取得（なければ作成）
+    const getOrCreateUserUsage = async (ownerUserId: string) => {
+        const result = await client.models.UserUsage.list({
+            filter: {
+                ownerUserId: {
+                    eq: ownerUserId,
+                },
+            },
+            authMode: "userPool",
+        });
+
+        const existing = result.data[0];
+
+        if (existing) {
+            return existing;
+        }
+
+        const created = await client.models.UserUsage.create(
+            {
+                ownerUserId,
+                postCount: 0,
+                aiCaptionCount: 0,
+                postLimit: 30,
+                aiCaptionLimit: 5,
+            },
+            {
+                authMode: "userPool",
+            },
+        );
+
+        return created.data;
     };
 
     return (
