@@ -431,8 +431,8 @@ function CreateBoard() {
                 ownerUserId,
                 postCount: 0,
                 aiCaptionCount: 0,
-                postLimit: 30,
-                aiCaptionLimit: 5,
+                postLimit: 100,
+                aiCaptionLimit: 100,
             },
             {
                 authMode: "userPool",
